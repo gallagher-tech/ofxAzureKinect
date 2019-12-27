@@ -1,7 +1,11 @@
 #pragma once
 
 #include <k4a/k4a.hpp>
+
+#ifdef OFXAZUREKINECT_BODYSDK
 #include <k4abt.h>
+#endif
+
 #include <turbojpeg.h>
 
 #include "ofBufferObject.h"
@@ -36,6 +40,7 @@ namespace ofxAzureKinect
 		DeviceSettings(int idx = 0);
 	};
 
+#ifdef OFXAZUREKINECT_BODYSDK
 	struct BodyTrackingSettings
 	{
 		SensorOrientation sensorOrientation;
@@ -46,6 +51,7 @@ namespace ofxAzureKinect
 
 		BodyTrackingSettings();
 	};
+#endif
 
 	class Device 
 		: ofThread
@@ -59,7 +65,9 @@ namespace ofxAzureKinect
 
 		bool open(int idx = 0);
 		bool open(DeviceSettings settings);
+#ifdef OFXAZUREKINECT_BODYSDK
 		bool open(DeviceSettings settings, BodyTrackingSettings bodyTrackingSettings);
+#endif
 		bool close();
 
 		bool startCameras();
@@ -89,6 +97,7 @@ namespace ofxAzureKinect
 		const ofPixels& getColorInDepthPix() const;
 		const ofTexture& getColorInDepthTex() const;
 
+#ifdef OFXAZUREKINECT_BODYSDK
 		const ofPixels& getBodyIndexPix() const;
 		const ofTexture& getBodyIndexTex() const;
 
@@ -96,10 +105,10 @@ namespace ofxAzureKinect
 		const std::vector<k4abt_skeleton_t>& getBodySkeletons() const;
 		const std::vector<uint32_t>& getBodyIDs() const;
 
-		const ofVbo& getPointCloudVbo() const;
-
-	public:
 		ofParameter<float> jointSmoothing{ "Joint Smoothing", 0.0f, 0.0f, 1.0f };
+#endif
+
+		const ofVbo& getPointCloudVbo() const;
 
 	protected:
 		void threadedFunction() override;
@@ -126,7 +135,9 @@ namespace ofxAzureKinect
 
 		bool bUpdateColor;
 		bool bUpdateIr;
+#ifdef OFXAZUREKINECT_BODYSDK
 		bool bUpdateBodies;
+#endif
 		bool bUpdateWorld;
 		bool bUpdateVbo;
 
@@ -142,8 +153,10 @@ namespace ofxAzureKinect
 		k4a::device device;
 		k4a::capture capture;
 
+#ifdef OFXAZUREKINECT_BODYSDK
 		k4abt_tracker_configuration_t trackerConfig;
 		k4abt_tracker_t bodyTracker;
+#endif
 
 		tjhandle jpegDecompressor;
 
@@ -170,10 +183,12 @@ namespace ofxAzureKinect
 		ofPixels colorInDepthPix;
 		ofTexture colorInDepthTex;
 
+#ifdef OFXAZUREKINECT_BODYSDK
 		ofPixels bodyIndexPix;
 		ofTexture bodyIndexTex;
 		std::vector<k4abt_skeleton_t> bodySkeletons;
 		std::vector<uint32_t> bodyIDs;
+#endif
 
 		std::vector<glm::vec3> positionCache;
 		std::vector<glm::vec2> uvCache;

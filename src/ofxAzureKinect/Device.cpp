@@ -19,12 +19,14 @@ namespace ofxAzureKinect
 		, synchronized(true)
 	{}
 
+#ifdef OFXAZUREKINECT_BODYSDK
 	BodyTrackingSettings::BodyTrackingSettings()
 		: sensorOrientation(K4ABT_SENSOR_ORIENTATION_DEFAULT)
 		, processingMode(K4ABT_TRACKER_PROCESSING_MODE_GPU)
 		, gpuDeviceID(0)
 		, updateBodies(false)
 	{}
+#endif
 
 	int Device::getInstalledCount()
 	{
@@ -37,10 +39,12 @@ namespace ofxAzureKinect
 		, bStreaming(false)
 		, bUpdateColor(false)
 		, bUpdateIr(false)
+#ifdef OFXAZUREKINECT_BODYSDK
 		, bUpdateBodies(false)
+		, bodyTracker(nullptr)
+#endif
 		, bUpdateWorld(false)
 		, bUpdateVbo(false)
-		, bodyTracker(nullptr)
 		, jpegDecompressor(tjInitDecompress())
 	{}
 
@@ -53,15 +57,21 @@ namespace ofxAzureKinect
 
 	bool Device::open(int idx)
 	{
-		return this->open(DeviceSettings(idx), BodyTrackingSettings());
+		return this->open(DeviceSettings(idx));
 	}
 
+#ifdef OFXAZUREKINECT_BODYSDK
 	bool Device::open(DeviceSettings deviceSettings)
 	{
 		return this->open(deviceSettings, BodyTrackingSettings());
 	}
+#endif
 
-	bool Device::open(DeviceSettings deviceSettings, BodyTrackingSettings bodyTrackingSettings)
+	bool Device::open(DeviceSettings deviceSettings
+#ifdef OFXAZUREKINECT_BODYSDK
+		, BodyTrackingSettings bodyTrackingSettings
+#endif
+	)
 	{
 		this->config = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
 		this->config.depth_mode = deviceSettings.depthMode;
@@ -70,8 +80,10 @@ namespace ofxAzureKinect
 		this->config.camera_fps = deviceSettings.cameraFps;
 		this->config.synchronized_images_only = deviceSettings.synchronized;
 
+#ifdef OFXAZUREKINECT_BODYSDK
 		this->trackerConfig.sensor_orientation = bodyTrackingSettings.sensorOrientation;
 		this->trackerConfig.gpu_device_id = bodyTrackingSettings.gpuDeviceID;
+#endif
 
 		if (this->bOpen)
 		{
@@ -106,6 +118,7 @@ namespace ofxAzureKinect
 		this->bUpdateWorld = deviceSettings.updateWorld;
 		this->bUpdateVbo = deviceSettings.updateWorld && deviceSettings.updateVbo;
 
+#ifdef OFXAZUREKINECT_BODYSDK
 		this->bUpdateBodies = bodyTrackingSettings.updateBodies;
 		if (this->bUpdateBodies)
 		{
@@ -114,6 +127,7 @@ namespace ofxAzureKinect
 				k4abt_tracker_set_temporal_smoothing(this->bodyTracker, this->jointSmoothing);
 			}));
 		}
+#endif
 
 		ofLogNotice(__FUNCTION__) << "Successfully opened device " << this->index << " with serial number " << this->serialNumber << ".";
 
@@ -162,11 +176,13 @@ namespace ofxAzureKinect
 			this->transformation = k4a::transformation(this->calibration);
 		}
 
+#ifdef OFXAZUREKINECT_BODYSDK
 		if (this->bUpdateBodies)
 		{
 			// Create tracker.
 			k4abt_tracker_create(&this->calibration, this->trackerConfig, &this->bodyTracker);
 		}
+#endif
 
 		if (this->bUpdateWorld)
 		{
@@ -212,12 +228,14 @@ namespace ofxAzureKinect
 		this->depthToWorldImg.reset();
 		this->transformation.destroy();
 
+#ifdef OFXAZUREKINECT_BODYSDK
 		if (this->bUpdateBodies)
 		{
 			k4abt_tracker_shutdown(this->bodyTracker);
 			k4abt_tracker_destroy(this->bodyTracker);
 			this->bodyTracker = nullptr;
 		}
+#endif
 
 		this->device.stop_cameras();
 
@@ -347,6 +365,8 @@ namespace ofxAzureKinect
 			}
 		}
 
+#ifdef OFXAZUREKINECT_BODYSDK
+
 		if (this->bUpdateBodies)
 		{
 			k4a_wait_result_t enqueueResult = k4abt_tracker_enqueue_capture(this->bodyTracker, this->capture.handle(), K4A_WAIT_INFINITE);
@@ -393,6 +413,8 @@ namespace ofxAzureKinect
 				}
 			}
 		}
+
+#endif
 
 		if (this->bUpdateVbo)
 		{
@@ -478,6 +500,7 @@ namespace ofxAzureKinect
 				ofLogVerbose(__FUNCTION__) << "Update Ir16 " << this->irTex.getWidth() << "x" << this->irTex.getHeight() << ".";
 			}
 
+#ifdef OFXAZUREKINECT_BODYSDK
 			if (this->bUpdateBodies)
 			{
 				if (!this->bodyIndexTex.isAllocated())
@@ -488,6 +511,7 @@ namespace ofxAzureKinect
 
 				this->bodyIndexTex.loadData(this->bodyIndexPix);
 			}
+#endif
 
 			if (this->bUpdateVbo)
 			{
@@ -822,6 +846,8 @@ namespace ofxAzureKinect
 		return this->colorInDepthTex;
 	}
 
+#ifdef OFXAZUREKINECT_BODYSDK
+
 	const ofPixels& Device::getBodyIndexPix() const
 	{
 		return this->bodyIndexPix;
@@ -846,6 +872,8 @@ namespace ofxAzureKinect
 	{
 		return this->bodyIDs;
 	}
+
+#endif
 
 	const ofVbo& Device::getPointCloudVbo() const
 	{
