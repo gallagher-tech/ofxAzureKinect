@@ -32,7 +32,8 @@ namespace ofxAzureKinect
 		
 		bool updateColor;
 		bool updateIr;
-		bool updateWorld;
+		//bool updateWorld;
+		bool updatePointsCache;
 		bool updateVbo;
 
 		bool synchronized;
@@ -138,7 +139,8 @@ namespace ofxAzureKinect
 #ifdef OFXAZUREKINECT_BODYSDK
 		bool bUpdateBodies;
 #endif
-		bool bUpdateWorld;
+		//bool bUpdateWorld;
+		bool bUpdatePointsCache;
 		bool bUpdateVbo;
 
 		std::condition_variable condition;
@@ -194,6 +196,8 @@ namespace ofxAzureKinect
 		std::vector<glm::vec2> uvCache;
 		size_t numPoints;
 		ofVbo pointCloudVbo;
+
+		ofShader vboTFShader;	// transform feedback GPU point cloud shader --> VBO
 
 		ofEventListeners eventListeners;
 	};

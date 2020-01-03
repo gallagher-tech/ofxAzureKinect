@@ -14,7 +14,7 @@ namespace ofxAzureKinect
 		, cameraFps(K4A_FRAMES_PER_SECOND_30)
 		, updateColor(true)
 		, updateIr(true)
-		, updateWorld(true)
+		, updatePointsCache(true)
 		, updateVbo(true)
 		, synchronized(true)
 	{}
@@ -43,7 +43,7 @@ namespace ofxAzureKinect
 		, bUpdateBodies(false)
 		, bodyTracker(nullptr)
 #endif
-		, bUpdateWorld(false)
+		, bUpdatePointsCache(false)
 		, bUpdateVbo(false)
 		, jpegDecompressor(tjInitDecompress())
 	{}
@@ -115,8 +115,9 @@ namespace ofxAzureKinect
 
 		this->bUpdateColor = deviceSettings.updateColor;
 		this->bUpdateIr = deviceSettings.updateIr;
-		this->bUpdateWorld = deviceSettings.updateWorld;
-		this->bUpdateVbo = deviceSettings.updateWorld && deviceSettings.updateVbo;
+		this->bUpdateVbo = deviceSettings.updateVbo;	// efficient in GL3+ with transform feedback
+		this->bUpdatePointsCache = deviceSettings.updatePointsCache || ( this->bUpdateVbo && !ofIsGLProgrammableRenderer());	// inefficient, but needed to stream to VBO in GL2
+
 
 #ifdef OFXAZUREKINECT_BODYSDK
 		this->bUpdateBodies = bodyTrackingSettings.updateBodies;
@@ -184,7 +185,7 @@ namespace ofxAzureKinect
 		}
 #endif
 
-		if (this->bUpdateWorld)
+		if (this->bUpdateVbo || this->bUpdatePointsCache)
 		{
 			// Load depth to world LUT.
 			this->setupDepthToWorldTable();
@@ -416,16 +417,17 @@ namespace ofxAzureKinect
 
 #endif
 
-		if (this->bUpdateVbo)
+		if (this->bUpdatePointsCache)
 		{
-			if (this->bUpdateColor)
-			{
-				this->updatePointsCache(colorImg, this->colorToWorldImg);
-			}
-			else
-			{
-				this->updatePointsCache(depthImg, this->depthToWorldImg);
-			}
+			//if (this->bUpdateColor)
+			//{
+			/// @tyhenry - this doesn't do anything...? neither colorImg nor colorToWorldImg have depth data
+			//	this->updatePointsCache(colorImg, this->colorToWorldImg);
+			//}
+			//else
+			//{
+				this->updatePointsCache(depthImg, this->depthToWorldImg);	/// todo: GPU alternative (e.g. map from VBO data)
+			//}
 		}
 
 		if (colorImg && this->bUpdateColor && this->config.color_format == K4A_IMAGE_FORMAT_COLOR_BGRA32)
@@ -515,8 +517,15 @@ namespace ofxAzureKinect
 
 			if (this->bUpdateVbo)
 			{
-				this->pointCloudVbo.setVertexData(this->positionCache.data(), this->numPoints, GL_STREAM_DRAW);
-				this->pointCloudVbo.setTexCoordData(this->uvCache.data(), this->numPoints, GL_STREAM_DRAW);
+				if (ofIsGLProgrammableRenderer()) {
+					// use transform feedback to generate fresh point cloud on GPU
+
+				}
+				else if (this->bUpdatePointsCache) {
+					// stream to vbo from the points cache
+					this->pointCloudVbo.setVertexData(this->positionCache.data(), this->numPoints, GL_STREAM_DRAW);
+					this->pointCloudVbo.setTexCoordData(this->uvCache.data(), this->numPoints, GL_STREAM_DRAW);
+				}
 			}
 
 			if (this->bUpdateColor && this->config.color_format == K4A_IMAGE_FORMAT_COLOR_BGRA32)
