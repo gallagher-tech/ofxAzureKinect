@@ -116,8 +116,24 @@ namespace ofxAzureKinect
 		this->bUpdateColor = deviceSettings.updateColor;
 		this->bUpdateIr = deviceSettings.updateIr;
 		this->bUpdateVbo = deviceSettings.updateVbo;	// efficient in GL3+ with transform feedback
-		this->bUpdatePointsCache = deviceSettings.updatePointsCache || ( this->bUpdateVbo && !ofIsGLProgrammableRenderer());	// inefficient, but needed to stream to VBO in GL2
+		this->bUpdatePointsCache = deviceSettings.updatePointsCache;  // inefficient, but needed to stream to VBO in GL2
+		
+		// Manage point cloud settings.
+		if ( this->bUpdateVbo ){
+			if (ofIsGLProgrammableRenderer()) {
 
+				// Load transform feedback shader.
+				ofShader::TransformFeedbackSettings settings;
+				settings.shaderSources[GL_VERTEX_SHADER] = pointcloud_vert_shader;
+				settings.bindDefaults = false;
+				settings.varyingsToCapture = { "vPosition" };  // vec3 (could also capture "vTexCoord" but should be static)
+				transformShader.setup(settings);
+
+			} else if (!this->bUpdatePointsCache){
+				this->bUpdatePointsCache = true; 
+				ofLogWarning( __FUNCTION__ ) << "\"updatePointsCache\" (needed for \"updateVbo\") is now enabled. (Use ofProgrammableRenderer / OpenGL3+ to update VBO on GPU instead.)";
+			}
+		}
 
 #ifdef OFXAZUREKINECT_BODYSDK
 		this->bUpdateBodies = bodyTrackingSettings.updateBodies;
@@ -275,7 +291,7 @@ namespace ofxAzureKinect
 			{
 				ofLogWarning(__FUNCTION__) << "Timed out waiting for a capture for device " << this->index << ".";
 				return;
-			}
+			} 
 		}
 		catch (const k4a::error& e)
 		{
@@ -419,14 +435,16 @@ namespace ofxAzureKinect
 
 		if (this->bUpdatePointsCache)
 		{
-			//if (this->bUpdateColor)
-			//{
-			/// @tyhenry - this doesn't do anything...? neither colorImg nor colorToWorldImg have depth data
-			//	this->updatePointsCache(colorImg, this->colorToWorldImg);
-			//}
-			//else
-			//{
-				this->updatePointsCache(depthImg, this->depthToWorldImg);	/// todo: GPU alternative (e.g. map from VBO data)
+			/* @tyhenry - removed, neither colorImg nor colorToWorldImg have depth data? */
+			/*
+			if (this->bUpdateColor)
+			{
+				this->updatePointsCache(colorImg, this->colorToWorldImg);
+			}
+			else
+			{
+			*/
+			this->updatePointsCache(depthImg, this->depthToWorldImg);	/// todo: GPU alternative (e.g. map VBO -> CPU)
 			//}
 		}
 
@@ -518,13 +536,58 @@ namespace ofxAzureKinect
 			if (this->bUpdateVbo)
 			{
 				if (ofIsGLProgrammableRenderer()) {
-					// use transform feedback to generate fresh point cloud on GPU
+
+					// update the vbo using transform feedback shader
+
+					// todo: generate point cloud from color frame using depthInColorTex?
+
+					glm::ivec2 depthDims = { this->depthToWorldPix.getWidth(), this->depthToWorldPix.getHeight() };
+					size_t nVerts = depthDims.x * depthDims.y;
+
+					// Allocate transform buffers.
+					if (nVerts > 0  && !this->transformInputVbo.getIsAllocated()) {
+
+						// input vbo
+						std::vector<glm::vec3> verts(nVerts);
+						this->transformInputVbo.setVertexData(verts.data(), nVerts, GL_STATIC_DRAW);
+
+						// output capture buffer
+						size_t bufSz	= nVerts * sizeof(glm::vec3);	// vPosition
+						this->transformOutBuffer.allocate(bufSz, GL_STREAM_READ);
+
+						// init vbo tex coords (can be done once)
+						std::vector<glm::vec2> texCoords(nVerts);
+						for (int i = 0; i < nVerts; ++i) {
+							texCoords[i] = { i % depthDims.x, i / depthDims.x };
+						}
+						this->pointCloudVbo.setTexCoordData(texCoords.data(), nVerts, GL_STATIC_DRAW);
+					}
+
+					// Run transform feedback.
+					this->transformShader.beginTransformFeedback(GL_POINTS, transformOutBuffer);
+					{
+						this->transformShader.setUniformTexture("uDepthTex", depthTex, 1);
+						this->transformShader.setUniformTexture("uWorldTex", depthToWorldTex, 2);
+						this->transformShader.setUniform2i("uFrameSize", depthDims.x, depthDims.y);
+						this->transformInputVbo.draw(GL_POINTS, 0, transformInputVbo.getNumVertices());
+					}
+					this->transformShader.endTransformFeedback(transformOutBuffer);
+					this->pointCloudVbo.setVertexBuffer(transformOutBuffer, 3, 0, 0);
+
+					if (this->bUpdatePointsCache) {
+						
+						// todo - read from vbo to cache
+					}
 
 				}
 				else if (this->bUpdatePointsCache) {
 					// stream to vbo from the points cache
 					this->pointCloudVbo.setVertexData(this->positionCache.data(), this->numPoints, GL_STREAM_DRAW);
 					this->pointCloudVbo.setTexCoordData(this->uvCache.data(), this->numPoints, GL_STREAM_DRAW);
+				}
+				else {
+					// shouldn't happen
+					ofLogWarning( __FUNCTION__ ) << "Can't update VBO - requires GL3+ (ofProgrammableRenderer) or enable bUpdatePointsCache";
 				}
 			}
 

@@ -73,7 +73,7 @@ namespace ofxAzureKinect
 			pos.xy		+= ray.xy * is_false( vValid );		// sets xy to ray.xy if invalid
 
 			pos.xy		*= -1;	// flip xy to account for OpenGL <--> K4A axes
-			vPosition	=  pos;
+			vPosition	=  pos.xyz;
 			gl_Position = modelViewProjectionMatrix * pos;	// reproject into kinect clip space for rendering
 		}
 	)";

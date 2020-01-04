@@ -16,6 +16,7 @@
 #include "ofThread.h"
 #include "ofVboMesh.h"
 #include "ofVectorMath.h"
+#include "ofShader.h"
 
 #include "Types.h"
 
@@ -139,7 +140,6 @@ namespace ofxAzureKinect
 #ifdef OFXAZUREKINECT_BODYSDK
 		bool bUpdateBodies;
 #endif
-		//bool bUpdateWorld;
 		bool bUpdatePointsCache;
 		bool bUpdateVbo;
 
@@ -197,7 +197,10 @@ namespace ofxAzureKinect
 		size_t numPoints;
 		ofVbo pointCloudVbo;
 
-		ofShader vboTFShader;	// transform feedback GPU point cloud shader --> VBO
+		// transform feedback - updates VBO on GPU from depth texture
+		ofShader transformShader;
+		ofVbo transformInputVbo;			// static input vbo
+		ofBufferObject transformOutBuffer;	// output capture buffer
 
 		ofEventListeners eventListeners;
 	};
