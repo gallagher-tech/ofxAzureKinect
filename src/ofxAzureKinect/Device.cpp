@@ -2,7 +2,7 @@
 
 #include "ofLog.h"
 
-const int32_t TIMEOUT_IN_MS = 1000;
+const int32_t TIMEOUT_IN_MS = 0;
 
 namespace ofxAzureKinect
 {
@@ -950,5 +950,9 @@ namespace ofxAzureKinect
 	const ofVbo& Device::getPointCloudVbo() const
 	{
 		return this->pointCloudVbo;
+	}
+	const std::string & Device::getSerialNumber() const
+	{
+		return this->serialNumber;
 	}
 }

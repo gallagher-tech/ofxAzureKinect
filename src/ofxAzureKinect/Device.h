@@ -111,6 +111,7 @@ namespace ofxAzureKinect
 #endif
 
 		const ofVbo& getPointCloudVbo() const;
+		const std::string& getSerialNumber() const;
 
 	protected:
 		void threadedFunction() override;
