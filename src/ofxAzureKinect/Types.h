@@ -23,7 +23,19 @@ inline const glm::quat toGlm(const k4a_quaternion_t & q)
 {
 	return glm::quat(q.v[0], q.v[1], q.v[2], q.v[3]);
 }
-#endif
+#endif 
+
+namespace helpers {
+
+	// Helper - RAII class to auto cleanup / do something on early return
+	struct scope_guard {
+		scope_guard(const std::function<void()>& f) : _f(f) {}
+		~scope_guard() { if (_f) _f(); }
+	protected:
+		std::function<void()> _f;
+	};
+
+}
 
 namespace ofxAzureKinect
 {

@@ -201,6 +201,14 @@ namespace ofxAzureKinect
 		}
 #endif
 
+		// Store the current ofGetUsingArbTex() value before enabling for the texture allocations below.
+		// Use RAII to restore global setttings on exit.
+		bool wasUsingArbTex = ofGetUsingArbTex();
+		ofEnableArbTex();
+		helpers::scope_guard g( [wasUsingArbTex](){ 
+			if (!wasUsingArbTex) { ofDisableArbTex(); } 
+		} );
+
 		if (this->bUpdateVbo || this->bUpdatePointsCache)
 		{
 			// Load depth to world LUT.
@@ -444,7 +452,7 @@ namespace ofxAzureKinect
 			else
 			{
 			*/
-			this->updatePointsCache(depthImg, this->depthToWorldImg);	/// todo: GPU alternative (e.g. map VBO -> CPU)
+			this->updatePointsCache(depthImg, this->depthToWorldImg);	// todo: GPU alternative (e.g. map VBO -> CPU)
 			//}
 		}
 
@@ -471,6 +479,13 @@ namespace ofxAzureKinect
 	{
 		if (this->texFrameNum != this->pixFrameNum)
 		{
+			// Store the current ofGetUsingArbTex() value and enable.
+			bool wasUsingArbTex = ofGetUsingArbTex();
+			ofEnableArbTex();
+
+			// Use RAII scope guard to restore previous setting on exit.
+			helpers::scope_guard g([wasUsingArbTex]() { if (!wasUsingArbTex) ofDisableArbTex(); });
+
 			// Update the depth texture.
 			if (!this->depthTex.isAllocated())
 			{
@@ -623,6 +638,12 @@ namespace ofxAzureKinect
 
 	bool Device::setupDepthToWorldTable()
 	{
+		// Store the current ofGetUsingArbTex() value before enabling for the texture allocations below.
+		// Use RAII to restore global setttings on exit.
+		bool wasUsingArbTex = ofGetUsingArbTex();
+		ofEnableArbTex();
+		helpers::scope_guard g([wasUsingArbTex]() { if (!wasUsingArbTex) ofDisableArbTex(); });
+
 		if (this->setupImageToWorldTable(K4A_CALIBRATION_TYPE_DEPTH, this->depthToWorldImg))
 		{
 			const int width = this->depthToWorldImg.get_width_pixels();
@@ -648,6 +669,13 @@ namespace ofxAzureKinect
 
 	bool Device::setupColorToWorldTable()
 	{
+
+		// Store the current ofGetUsingArbTex() value before enabling for the texture allocations below.
+		// Use RAII to restore global setttings on exit.
+		bool wasUsingArbTex = ofGetUsingArbTex();
+		ofEnableArbTex();
+		helpers::scope_guard g([wasUsingArbTex]() { if (!wasUsingArbTex) ofDisableArbTex(); });
+
 		if (this->setupImageToWorldTable(K4A_CALIBRATION_TYPE_COLOR, this->colorToWorldImg))
 		{
 			const int width = this->colorToWorldImg.get_width_pixels();
