@@ -8,48 +8,121 @@
 
 #include "ofVectorMath.h"
 
-inline const glm::vec2 & toGlm(const k4a_float2_t & v) 
+inline const glm::vec2& toGlm( const k4a_float2_t& v )
 {
-	return *reinterpret_cast<const glm::vec2*>(&v);
+	return *reinterpret_cast<const glm::vec2*>( &v );
 }
 
-inline const glm::vec3 & toGlm(const k4a_float3_t & v)
+inline const glm::vec3& toGlm( const k4a_float3_t& v )
 {
-	return *reinterpret_cast<const glm::vec3*>(&v);
+	return *reinterpret_cast<const glm::vec3*>( &v );
 }
 
 #ifdef OFXAZUREKINECT_BODYSDK
-inline const glm::quat toGlm(const k4a_quaternion_t & q)
+inline const glm::quat toGlm( const k4a_quaternion_t& q )
 {
-	return glm::quat(q.v[0], q.v[1], q.v[2], q.v[3]);
+	return glm::quat( q.v[0], q.v[1], q.v[2], q.v[3] );
 }
-#endif 
+#endif
 
 namespace helpers {
 
-	// Helper - RAII class to auto cleanup / do something on early return
-	struct scope_guard {
-		scope_guard(const std::function<void()>& f) : _f(f) {}
-		~scope_guard() { if (_f) _f(); }
-	protected:
-		std::function<void()> _f;
-	};
+// Helper - RAII class to auto cleanup / do something on early return
+struct scope_guard
+{
+	scope_guard( const std::function<void()>& f )
+	    : _f( f ) {}
+	~scope_guard()
+	{
+		if ( _f ) _f();
+	}
 
+protected:
+	std::function<void()> _f;
+};
+
+}  // namespace helpers
+
+namespace ofxAzureKinect {
+typedef k4a_depth_mode_t DepthMode;
+typedef k4a_color_resolution_t ColorResolution;
+typedef k4a_image_format_t ImageFormat;
+typedef k4a_fps_t FramesPerSecond;
+
+template <typename T>
+inline const std::map<T, std::string>& type_to_str_map()
+{
+	return {};
 }
 
-namespace ofxAzureKinect
+template <>
+inline const std::map<k4a_depth_mode_t, std::string>& type_to_str_map()
 {
-	typedef k4a_depth_mode_t DepthMode;
-	typedef k4a_color_resolution_t ColorResolution;
-	typedef k4a_image_format_t ImageFormat;
-	typedef k4a_fps_t FramesPerSecond;
+	static const std::map<k4a_depth_mode_t, std::string> names = {
+	    { K4A_DEPTH_MODE_NFOV_2X2BINNED, "K4A_DEPTH_MODE_NFOV_2X2BINNED" }, /**< Depth captured at 320x288. Passive IR is also captured at 320x288. */
+	    { K4A_DEPTH_MODE_NFOV_UNBINNED, "K4A_DEPTH_MODE_NFOV_UNBINNED" },   /**< Depth captured at 640x576. Passive IR is also captured at 640x576. */
+	    { K4A_DEPTH_MODE_WFOV_2X2BINNED, "K4A_DEPTH_MODE_WFOV_2X2BINNED" }, /**< Depth captured at 512x512. Passive IR is also captured at 512x512. */
+	    { K4A_DEPTH_MODE_WFOV_UNBINNED, "K4A_DEPTH_MODE_WFOV_UNBINNED" },   /**< Depth captured at 1024x1024. Passive IR is also captured at 1024x1024. */
+	    { K4A_DEPTH_MODE_PASSIVE_IR, "K4A_DEPTH_MODE_PASSIVE_IR" },         /**< Passive IR only: return {};captured at 1024x1024. */
+	    { K4A_DEPTH_MODE_OFF, "K4A_DEPTH_MODE_OFF" } };                     /**< Depth sensor will be turned off with this setting. */
+	return names;
+};
+template <>
+inline const std::map<k4a_image_format_t, std::string>& type_to_str_map()
+{
+	static const std::map<k4a_image_format_t, std::string> names = {
+	    { K4A_IMAGE_FORMAT_COLOR_BGRA32, "K4A_IMAGE_FORMAT_COLOR_BGRA32" },
+	    { K4A_IMAGE_FORMAT_DEPTH16, "K4A_IMAGE_FORMAT_DEPTH16" },
+	    { K4A_IMAGE_FORMAT_IR16, "K4A_IMAGE_FORMAT_IR16" } };
+	return names;
+};
+template <>
+inline const std::map<k4a_color_resolution_t, std::string>& type_to_str_map()
+{
+	static const std::map<k4a_color_resolution_t, std::string> names = {
+	    { K4A_COLOR_RESOLUTION_OFF, "K4A_COLOR_RESOLUTION_OFF" },       /**< Color camera will be turned off with this setting */
+	    { K4A_COLOR_RESOLUTION_720P, "K4A_COLOR_RESOLUTION_720P" },     /**< 1280 * 720  16:9 */
+	    { K4A_COLOR_RESOLUTION_1080P, "K4A_COLOR_RESOLUTION_1080P" },   /**< 1920 * 1080 16:9 */
+	    { K4A_COLOR_RESOLUTION_1440P, "K4A_COLOR_RESOLUTION_1440P" },   /**< 2560 * 1440 16:9 */
+	    { K4A_COLOR_RESOLUTION_1536P, "K4A_COLOR_RESOLUTION_1536P" },   /**< 2048 * 1536 4:3  */
+	    { K4A_COLOR_RESOLUTION_2160P, "K4A_COLOR_RESOLUTION_2160P" },   /**< 3840 * 2160 16:9 */
+	    { K4A_COLOR_RESOLUTION_3072P, "K4A_COLOR_RESOLUTION_3072P" } }; /**< 4096 * 3072 4:3  */
+	return names;
+};
+template <>
+inline const std::map<k4a_fps_t, std::string>& type_to_str_map()
+{
+	static const std::map<k4a_fps_t, std::string> names = {
+	    { K4A_FRAMES_PER_SECOND_5, "K4A_FRAMES_PER_SECOND_5" },     /**< 5 FPS */
+	    { K4A_FRAMES_PER_SECOND_15, "K4A_FRAMES_PER_SECOND_15" },   /**< 15 FPS */
+	    { K4A_FRAMES_PER_SECOND_30, "K4A_FRAMES_PER_SECOND_30" } }; /**< 30 FPS */
+	return names;
+};
+
+template <typename T>
+inline std::string to_string(T type) {
+	try {
+		return type_to_str_map<T>().at(type);
+	}
+	catch (...) {}
+	return "";
+}
+template <typename T>
+inline T to_type(std::string str, const T& default_value) {
+	for (auto& type : type_to_str_map<T>()) {
+		if (type.second == str) {
+			return type.first;
+		}
+		return default_value;
+	}
+}
 
 #ifdef OFXAZUREKINECT_BODYSDK
-	typedef k4abt_sensor_orientation_t SensorOrientation;
-	typedef k4abt_tracker_processing_mode_t ProcessingMode;
+typedef k4abt_sensor_orientation_t SensorOrientation;
+typedef k4abt_tracker_processing_mode_t ProcessingMode;
 #endif
 
-	static const std::string pointcloud_vert_shader = R"(
+static const std::string pointcloud_vert_shader = R"(
 		#version 150
 
 		// -----------------------------------------------------------------------
@@ -90,4 +163,4 @@ namespace ofxAzureKinect
 		}
 	)";
 
-}
+}  // namespace ofxAzureKinect
