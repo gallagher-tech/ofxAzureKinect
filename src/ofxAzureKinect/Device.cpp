@@ -297,7 +297,9 @@ namespace ofxAzureKinect
 		{
 			if (!this->device.get_capture(&this->capture, std::chrono::milliseconds(TIMEOUT_IN_MS)))
 			{
-				ofLogWarning(__FUNCTION__) << "Timed out waiting for a capture for device " << this->index << ".";
+				if (TIMEOUT_IN_MS > 0) {
+					ofLogWarning(__FUNCTION__) << "Timed out waiting for a capture for device " << this->index << ".";
+				}
 				return;
 			} 
 		}
