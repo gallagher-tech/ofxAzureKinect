@@ -140,16 +140,22 @@ static const std::string pointcloud_vert_shader = R"(
 		uniform ivec2 uFrameSize;				// texture dims
 
 		out vec3 vPosition;						// world space position
+		out vec3 vNormal;						// normal
 		out vec2 vTexCoord;						// color UV map coords
 		flat out int vValid;					// flag valid / invalid point
 
 		int is_true(float b)	{ return int(abs(sign(b))); }	// b != 0 ? 1 : 0
 		int is_false(float b)	{ return 1-is_true(b); }		// b == 0 ? 1 : 0
 
-		void main()
+		float getDepth( vec2 uvRect )
 		{
+			return texture( uDepthTex, uvRect ).r * 65535.0;	// remap 0-1 to short range ( millimeters )
+		}
+
+		void main()
+		{ 
 			vTexCoord	= vec2(gl_VertexID % uFrameSize.x, gl_VertexID / uFrameSize.x);
-			float depth	= texture( uDepthTex, vTexCoord ).r * 65535.0;	// remap 0-1 to short range ( millimeters )
+			float depth	= getDepth( vTexCoord );						// millimeters
 			vec4 ray	= texture( uWorldTex, vTexCoord );				// depth to world projection map
 			vValid		= is_true( depth * ray.x * ray.y );				// flag valid (1) / invalid (0)
 
@@ -159,6 +165,14 @@ static const std::string pointcloud_vert_shader = R"(
 
 			pos.xy		*= -1;	// flip xy to account for OpenGL <--> K4A axes
 			vPosition	=  pos.xyz;
+
+			// calc normals
+			// https://stackoverflow.com/questions/34644101/calculate-surface-normals-from-depth-image-using-neighboring-pixels-cross-produc
+			float dx	= ( getDepth( vTexCoord + vec2(1,0) ) - getDepth( vTexCoord + vec2(-1,0)) ) * .5;
+			float dy	= ( getDepth( vTexCoord + vec2(0,1) ) - getDepth( vTexCoord + vec2(0,-1)) ) * .5;
+			vec3 d		= vec3(-dx, -dy, 1.);
+			vNormal		= normalize(d);
+
 			gl_Position = modelViewProjectionMatrix * pos;	// reproject into kinect clip space for rendering
 		}
 	)";

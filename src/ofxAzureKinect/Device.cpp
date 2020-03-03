@@ -126,7 +126,7 @@ namespace ofxAzureKinect
 				ofShader::TransformFeedbackSettings settings;
 				settings.shaderSources[GL_VERTEX_SHADER] = pointcloud_vert_shader;
 				settings.bindDefaults = false;
-				settings.varyingsToCapture = { "vPosition" };  // vec3 (could also capture "vTexCoord" but should be static)
+				settings.varyingsToCapture = { "vPosition", "vNormal" };
 				transformShader.setup(settings);
 
 			} else if (!this->bUpdatePointsCache){
@@ -292,6 +292,7 @@ namespace ofxAzureKinect
 
 	void Device::updatePixels()
 	{
+
 		// Get a capture.
 		try
 		{
@@ -301,7 +302,7 @@ namespace ofxAzureKinect
 					ofLogWarning(__FUNCTION__) << "Timed out waiting for a capture for device " << this->index << ".";
 				}
 				return;
-			} 
+			}
 		}
 		catch (const k4a::error& e)
 		{
@@ -569,7 +570,7 @@ namespace ofxAzureKinect
 						this->transformInputVbo.setVertexData(verts.data(), nVerts, GL_STATIC_DRAW);
 
 						// output capture buffer
-						size_t bufSz	= nVerts * sizeof(glm::vec3);	// vPosition
+						size_t bufSz	= nVerts * sizeof(glm::vec3) * 2.;	// vPosition + vNormal
 						this->transformOutBuffer.allocate(bufSz, GL_STREAM_READ);
 
 						// init vbo tex coords (can be done once)
@@ -578,6 +579,8 @@ namespace ofxAzureKinect
 							texCoords[i] = { i % depthDims.x, i / depthDims.x };
 						}
 						this->pointCloudVbo.setTexCoordData(texCoords.data(), nVerts, GL_STATIC_DRAW);
+						auto mesh = ofMesh::plane(0, 0, depthDims.x, depthDims.y, OF_PRIMITIVE_TRIANGLES);
+						this->pointCloudVbo.setIndexData(mesh.getIndices().data(), mesh.getNumIndices(), GL_STREAM_DRAW);
 					}
 
 					// Run transform feedback.
@@ -589,7 +592,9 @@ namespace ofxAzureKinect
 						this->transformInputVbo.draw(GL_POINTS, 0, transformInputVbo.getNumVertices());
 					}
 					this->transformShader.endTransformFeedback(transformOutBuffer);
-					this->pointCloudVbo.setVertexBuffer(transformOutBuffer, 3, 0, 0);
+					//this->pointCloudVbo.setVertexBuffer(transformOutBuffer, 3, 0, 0);
+					this->pointCloudVbo.setVertexBuffer( transformOutBuffer, 3, sizeof(glm::vec3) * 2, 0);
+					this->pointCloudVbo.setNormalBuffer( transformOutBuffer, sizeof(glm::vec3) * 2, sizeof(glm::vec3) );
 
 					if (this->bUpdatePointsCache) {
 						
@@ -800,6 +805,7 @@ namespace ofxAzureKinect
 
 	bool Device::updateDepthInColorFrame(const k4a::image& depthImg, const k4a::image& colorImg)
 	{
+
 		const auto colorDims = glm::ivec2(colorImg.get_width_pixels(), colorImg.get_height_pixels());
 
 		k4a::image transformedDepthImg;
@@ -835,6 +841,7 @@ namespace ofxAzureKinect
 
 	bool Device::updateColorInDepthFrame(const k4a::image& depthImg, const k4a::image& colorImg)
 	{
+
 		const auto depthDims = glm::ivec2(depthImg.get_width_pixels(), depthImg.get_height_pixels());
 
 		k4a::image transformedColorImg;

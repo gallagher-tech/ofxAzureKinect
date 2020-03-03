@@ -204,5 +204,6 @@ namespace ofxAzureKinect
 		ofBufferObject transformOutBuffer;	// output capture buffer
 
 		ofEventListeners eventListeners;
+
 	};
 }
