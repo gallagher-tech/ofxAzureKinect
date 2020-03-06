@@ -640,6 +640,9 @@ namespace ofxAzureKinect
 
 			// Update frame number.
 			this->texFrameNum = this->pixFrameNum;
+			this->isFrameNew = true;
+		} else {
+			this->isFrameNew = false;
 		}
 	}
 
@@ -991,5 +994,9 @@ namespace ofxAzureKinect
 	const std::string & Device::getSerialNumber() const
 	{
 		return this->serialNumber;
+	}
+	bool Device::getIsFrameNew() const
+	{
+		return this->isFrameNew;
 	}
 }

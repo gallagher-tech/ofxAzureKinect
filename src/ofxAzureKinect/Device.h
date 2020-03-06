@@ -112,6 +112,7 @@ namespace ofxAzureKinect
 
 		const ofVbo& getPointCloudVbo() const;
 		const std::string& getSerialNumber() const;
+		bool getIsFrameNew() const;
 
 	protected:
 		void threadedFunction() override;
@@ -147,6 +148,7 @@ namespace ofxAzureKinect
 		std::condition_variable condition;
 		uint64_t pixFrameNum;
 		uint64_t texFrameNum;
+		bool isFrameNew;
 
 		std::string serialNumber;
 
