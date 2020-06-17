@@ -209,16 +209,13 @@ namespace ofxAzureKinect
 			if (!wasUsingArbTex) { ofDisableArbTex(); } 
 		} );
 
-		if (this->bUpdateVbo || this->bUpdatePointsCache)
-		{
-			// Load depth to world LUT.
-			this->setupDepthToWorldTable();
+		// Load depth to world LUT.
+		this->setupDepthToWorldTable();
 
-			if (this->bUpdateColor)
-			{
-				// Load color to world LUT.
-				this->setupColorToWorldTable();
-			}
+		if (this->bUpdateColor)
+		{
+			// Load color to world LUT.
+			this->setupColorToWorldTable();
 		}
 
 		// Start cameras.
