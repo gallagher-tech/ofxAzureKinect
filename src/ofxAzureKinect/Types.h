@@ -100,21 +100,22 @@ inline const std::map<k4a_fps_t, std::string>& type_to_str_map()
 };
 
 template <typename T>
-inline std::string to_string(T type) {
+inline std::string to_string( T type )
+{
 	try {
-		return type_to_str_map<T>().at(type);
-	}
-	catch (...) {}
+		return type_to_str_map<T>().at( type );
+	} catch ( ... ) {}
 	return "";
 }
 template <typename T>
-inline T to_type(std::string str, const T& default_value) {
-	for (auto& type : type_to_str_map<T>()) {
-		if (type.second == str) {
+inline T to_type( std::string str, const T& default_value )
+{
+	for ( auto& type : type_to_str_map<T>() ) {
+		if ( type.second == str ) {
 			return type.first;
 		}
-		return default_value;
 	}
+	return default_value;
 }
 
 #ifdef OFXAZUREKINECT_BODYSDK
